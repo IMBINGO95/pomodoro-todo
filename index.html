@@ -721,7 +721,8 @@ function saveSettings() {
     settings.backgrounds.timer.url = document.getElementById('timerBgInput').value;
     settings.backgrounds.task.url = document.getElementById('taskBgInput').value;
     settings.backgrounds.review.url = document.getElementById('reviewBgInput').value;
-    saveSettings(); applyBackgrounds(); updatePageTitle();
+    localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
+    applyBackgrounds(); updatePageTitle();
     currentTime = settings.workDuration * 60; updateTimerDisplay();
     closeModal('settingsModal');
 }
