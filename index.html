@@ -1107,14 +1107,16 @@ function calculateReviewSummary(periodStr) {
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateStr = formatDate(d);
         const taskTime = data.taskTime[dateStr] || {};
+        let dayMinutes = 0;
         Object.entries(taskTime).forEach(([task, m]) => {
             if (!taskDetails[task]) taskDetails[task] = { totalMinutes: 0, completeDays: 0 };
             taskDetails[task].totalMinutes += m;
             if (m >= COMPLETE_THRESHOLD) taskDetails[task].completeDays++;
+            dayMinutes += m;
             minutes += m;
-            if (m >= COMPLETE_THRESHOLD && (taskDetails[task].completeDays === 1 || true)) tasks = Math.max(tasks, Object.keys(taskDetails).length);
         });
-        pomodoros += Math.floor(minutes / 25);
+        // 每天单独计算番茄数，而不是累积计算
+        pomodoros += Math.floor(dayMinutes / 25);
     }
     // 统计完成的任务数（不同任务达标天数总和）
     let totalCompleteDays = 0;
