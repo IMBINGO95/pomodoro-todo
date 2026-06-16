@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="日常清单">
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="manifest.json">
+    <title>🍅 日常清单</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --primary: #667eea; --primary-dark: #764ba2; --success: #27ae60; --warning: #f39c12; --danger: #e74c3c; --secondary: #95a5a6; --text: #333; --text-light: #666; --bg-card: white; --bg-main: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: var(--bg-main); min-height: 100vh; padding: 20px; }
+        body.dark-theme { --primary: #4a69bd; --bg-card: #2c3e50; --text: #ecf0f1; --text-light: #bdc3c7; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        body.light-theme { --primary: #0984e3; --bg-card: #ffffff; --text: #2d3436; --text-light: #636e72; background: linear-gradient(135deg, #dfe6e9 0%, #b2bec3 100%); }
+        .container { max-width: 950px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header-title { display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .header-title h1 { font-size: 28px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .header-subtitle { color: rgba(255,255,255,0.8); font-size: 14px; margin-top: 5px; }
+        .settings-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; border-radius: 20px; cursor: pointer; }
+        .card { background: var(--bg-card); border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+        .card-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-size: cover; background-position: center; opacity: var(--bg-opacity, 0.15); z-index: 0; transition: opacity 0.3s; }
+        .card > * { position: relative; z-index: 1; }
+        .card-title { font-size: 18px; font-weight: bold; color: var(--text); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .date-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .date-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+        .date-btn { padding: 8px 15px; border: none; border-radius: 20px; background: rgba(255,255,255,0.3); color: white; cursor: pointer; font-size: 14px; }
+        .date-btn:hover { background: rgba(255,255,255,0.5); }
+        .date-btn.active { background: white; color: var(--primary); }
+        .calendar-btn { padding: 8px 15px; border: none; border-radius: 20px; background: rgba(255,255,255,0.3); color: white; cursor: pointer; }
+        .timer-display { text-align: center; padding: 20px 0; }
+        .timer-circle { width: 200px; height: 200px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 auto 20px; box-shadow: 0 8px 25px rgba(102,126,234,0.4); }
+        .timer-circle.running { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        .timer-mode { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 5px; }
+        .timer-time { color: white; font-size: 48px; font-weight: bold; font-family: "Consolas", monospace; }
+        .timer-controls { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .btn { padding: 12px 25px; border: none; border-radius: 25px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--secondary); color: white; }
+        .skip-reason-panel { display: none; justify-content: center; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .skip-reason-panel.show { display: flex; }
+        .reason-btn { padding: 8px 15px; border: 2px solid #ddd; border-radius: 20px; background: white; cursor: pointer; font-size: 13px; }
+        .task-selector { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .task-btn { padding: 8px 16px; border: 2px solid #ddd; border-radius: 20px; background: white; cursor: pointer; font-size: 14px; }
+        .task-btn:hover { border-color: var(--primary); }
+        .task-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .task-tag { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .add-task { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .add-task input { flex: 1; min-width: 150px; padding: 10px 15px; border: 2px solid #ddd; border-radius: 25px; font-size: 14px; outline: none; }
+        .add-task select { padding: 10px 15px; border: 2px solid #ddd; border-radius: 25px; font-size: 14px; cursor: pointer; }
+        .task-section-title { font-size: 14px; color: var(--text-light); margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+        .task-list { list-style: none; max-height: 400px; overflow-y: auto; }
+        .task-item { padding: 15px; border-bottom: 1px solid #eee; }
+        .task-main { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .task-info { flex: 1; min-width: 150px; }
+        .task-name { font-weight: bold; color: var(--text); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .task-time { font-size: 14px; color: var(--text-light); display: flex; align-items: center; gap: 10px; }
+        .task-time .progress-tooltip { font-size: 12px; color: var(--primary); }
+        .task-progress { width: 120px; height: 8px; background: #eee; border-radius: 4px; margin-top: 5px; overflow: hidden; }
+        .task-progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 4px; transition: width 0.5s; }
+        .task-actions { display: flex; gap: 8px; align-items: center; }
+        .task-btn-small { padding: 5px 10px; font-size: 12px; border: none; border-radius: 15px; cursor: pointer; }
+        .task-note { margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 10px; font-size: 13px; color: var(--text-light); display: none; }
+        .task-note.show { display: block; }
+        .completed { opacity: 0.6; }
+        .completed .task-name::after { content: " ✅"; }
+        .inherit-toggle { font-size: 11px; color: var(--text-light); cursor: pointer; margin-left: 5px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; }
+        .stat-item { text-align: center; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 15px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: var(--primary); }
+        .stat-label { font-size: 13px; color: var(--text-light); margin-top: 5px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal.show { display: flex; }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: var(--text); }
+        .modal-input, .modal-textarea, .modal-select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 14px; margin-bottom: 15px; outline: none; font-family: inherit; background: white; }
+        .modal-input:focus, .modal-textarea:focus { border-color: var(--primary); }
+        .modal-textarea { min-height: 100px; resize: vertical; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        .modal-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .modal-section-title { font-size: 14px; font-weight: bold; color: var(--text); margin-bottom: 10px; }
+        .modal-hint { font-size: 12px; color: var(--text-light); margin-top: 5px; }
+        .tip { background: #fff3cd; border-left: 4px solid var(--warning); padding: 10px 15px; border-radius: 5px; margin-bottom: 15px; font-size: 14px; color: #856404; }
+        .tip.success { background: #d4edda; border-color: var(--success); color: #155724; }
+        .review-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .review-tab { padding: 10px 20px; border: none; border-radius: 20px; background: #f0f0f0; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .review-tab:hover { background: #e0e0e0; }
+        .review-tab.active { background: var(--primary); color: white; }
+        .review-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .review-stat-item { text-align: center; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 15px; }
+        .review-stat-value { font-size: 24px; font-weight: bold; color: var(--primary); }
+        .review-stat-label { font-size: 12px; color: var(--text-light); margin-top: 5px; }
+        .review-editor { display: block; }
+        .review-editor.hidden { display: none; }
+        .review-actions { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .review-actions.hidden { display: none; }
+        .review-history { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .review-history-title { font-size: 14px; font-weight: bold; color: var(--text); margin-bottom: 10px; }
+        .review-history-list { max-height: 300px; overflow-y: auto; }
+        .review-year-group { margin-bottom: 10px; }
+        .review-year-header { display: flex; align-items: center; gap: 8px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 10px; cursor: pointer; margin-bottom: 5px; }
+        .review-year-title { font-weight: bold; color: var(--text); flex: 1; }
+        .review-year-toggle { font-size: 12px; color: var(--text-light); }
+        .review-month-group { margin-left: 15px; margin-bottom: 5px; }
+        .review-month-header { display: flex; align-items: center; gap: 8px; padding: 8px; cursor: pointer; }
+        .review-month-title { font-size: 13px; color: var(--text-light); flex: 1; }
+        .review-items { margin-left: 15px; }
+        .review-history-item { padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.03); margin-bottom: 8px; cursor: pointer; }
+        .review-history-item:hover { background: rgba(0,0,0,0.08); }
+        .review-history-header { display: flex; justify-content: space-between; align-items: center; }
+        .review-history-period { font-weight: bold; font-size: 13px; color: var(--text); }
+        .review-history-summary { font-size: 12px; color: var(--text-light); margin-top: 5px; }
+        .review-history-preview { font-size: 11px; color: #999; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .review-history-actions { display: flex; gap: 5px; }
+        .review-history-btn { padding: 3px 8px; font-size: 11px; border: none; border-radius: 10px; cursor: pointer; }
+        .calendar-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .calendar-modal.show { display: flex; }
+        .calendar-content { background: var(--bg-card); padding: 25px; border-radius: 20px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-nav { display: flex; gap: 10px; }
+        .calendar-nav button { padding: 8px 15px; border: none; border-radius: 10px; background: #f0f0f0; cursor: pointer; }
+        .calendar-title { font-size: 18px; font-weight: bold; color: var(--text); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+        .calendar-weekday { text-align: center; font-size: 12px; color: var(--text-light); padding: 5px; }
+        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; font-size: 14px; min-height: 55px; }
+        .calendar-day:hover { background: rgba(0,0,0,0.05); }
+        .calendar-day.other-month { color: #ccc; }
+        .calendar-day.today { border: 2px solid var(--primary); }
+        .calendar-day.selected { background: var(--primary); color: white; }
+        .calendar-heatmap { display: flex; gap: 3px; margin-top: 2px; }
+        .heatmap-bar { width: 4px; height: 12px; border-radius: 2px; background: #eee; }
+        .calendar-legend { display: flex; justify-content: center; gap: 15px; margin-top: 15px; font-size: 12px; color: var(--text-light); flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        .settings-group { margin-bottom: 15px; }
+        .settings-label { font-size: 14px; color: var(--text-light); margin-bottom: 8px; display: block; }
+        .settings-input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; font-size: 14px; outline: none; }
+        .settings-input:focus { border-color: var(--primary); }
+        .settings-row { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+        .settings-row label { min-width: 80px; font-size: 14px; color: var(--text); }
+        .settings-row input[type="number"] { width: 80px; padding: 8px; border: 2px solid #ddd; border-radius: 8px; }
+        .opacity-slider { width: 100%; margin-top: 10px; }
+        .trend-chart { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 15px; }
+        .trend-chart-title { font-size: 14px; font-weight: bold; color: var(--text); margin-bottom: 10px; }
+        .trend-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 80px; gap: 5px; }
+        .trend-bar-container { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .trend-bar { width: 20px; background: linear-gradient(to top, var(--primary), var(--primary-dark)); border-radius: 4px 4px 0 0; transition: height 0.3s; }
+        .trend-label { font-size: 10px; color: var(--text-light); margin-top: 5px; }
+        .comparison-view { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.03); border-radius: 15px; display: none; }
+        .comparison-title { font-size: 14px; font-weight: bold; color: var(--text); margin-bottom: 10px; }
+        .comparison-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .comparison-item { text-align: center; padding: 10px; background: white; border-radius: 10px; }
+        .comparison-label { font-size: 12px; color: var(--text-light); }
+        .comparison-value { font-size: 20px; font-weight: bold; color: var(--primary); }
+        .comparison-diff { font-size: 12px; margin-top: 5px; }
+        .comparison-diff.positive { color: var(--success); }
+        .comparison-diff.negative { color: var(--danger); }
+        @media (max-width: 600px) { 
+            .container { padding: 0; } 
+            body { padding: 10px; }
+            .card { border-radius: 0; margin-bottom: 15px; padding: 15px; } 
+            .header-title h1 { font-size: 22px; }
+            .date-area { flex-direction: column; gap: 8px; }
+            .date-selector { justify-content: center; }
+            .date-btn { padding: 6px 12px; font-size: 12px; }
+            .calendar-btn { font-size: 12px; padding: 6px 12px; }
+            .task-main { flex-direction: column; align-items: flex-start; }
+            .task-actions { width: 100%; justify-content: flex-end; gap: 5px; }
+            .task-progress { width: 100%; }
+            .task-btn-small { padding: 4px 8px; font-size: 11px; }
+            .task-name { font-size: 14px; }
+            .task-time { font-size: 12px; }
+            .btn { padding: 10px 18px; font-size: 14px; border-radius: 20px; }
+            .timer-circle { width: 150px; height: 150px; }
+            .timer-time { font-size: 36px; }
+            .timer-controls { gap: 8px; }
+            .timer-controls .btn { padding: 8px 14px; font-size: 13px; }
+            .card-title { font-size: 16px; }
+            .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .stat-item { padding: 10px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 11px; }
+            .review-tabs { gap: 8px; }
+            .review-tab { padding: 8px 14px; font-size: 13px; }
+            .modal-content { padding: 15px; }
+            .modal-title { font-size: 16px; }
+            .review-history-list { max-height: 200px; }
+            .review-year-header, .review-month-header { padding: 8px; }
+            .add-task { flex-direction: column; }
+            .add-task input { width: 100%; }
+            .add-task .btn { width: 100%; margin-top: 8px; }
+            .task-selector { gap: 6px; }
+            .task-btn { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-title">
+            <h1 id="pageTitle">🍅 番茄打卡</h1>
+            <button class="settings-btn" onclick="openSettingsModal()">⚙️ 设置</button>
+        </div>
+        <div class="header-subtitle" id="headerSubtitle"></div>
+        <button id="installBtn" class="settings-btn" style="display:none;" onclick="installApp()">📲 添加到桌面</button>
+    </div>
+    <div class="date-area">
+        <div class="date-selector" id="dateSelector"></div>
+        <button class="calendar-btn" onclick="openCalendarModal()">📅 月历</button>
+    </div>
+    <div class="card" id="timerCard">
+        <div class="card-bg" id="timerCardBg"></div>
+        <div class="card-title">⏱️ 番茄钟计时器</div>
+        <div class="tip">💡 番茄钟自动累加25分钟 | 手动设置直接覆盖当日总时长</div>
+        <div class="task-selector" id="taskSelector"></div>
+        <div class="timer-display">
+            <div class="timer-circle" id="timerCircle">
+                <div class="timer-mode" id="timerMode">工作时间</div>
+                <div class="timer-time" id="timerTime">25:00</div>
+            </div>
+        </div>
+        <div class="timer-controls">
+            <button class="btn btn-success" id="startBtn" onclick="startTimer()">▶ 开始</button>
+            <button class="btn btn-warning" id="pauseBtn" onclick="pauseTimer()" disabled>⏸ 暂停</button>
+            <button class="btn btn-secondary" onclick="resetTimer()">↺ 重置</button>
+            <button class="btn btn-primary" onclick="showSkipReasons()">⏭ 跳过</button>
+        </div>
+        <div class="skip-reason-panel" id="skipReasonPanel">
+            <span style="color: var(--text-light); font-size: 13px;">中断原因:</span>
+            <button class="reason-btn" onclick="skipWithReason('摸鱼')">🐟 摸鱼</button>
+            <button class="reason-btn" onclick="skipWithReason('临时有事')">📌 临时有事</button>
+            <button class="reason-btn" onclick="skipWithReason('休息')">☕ 休息</button>
+            <button class="reason-btn" onclick="skipSession()">无</button>
+        </div>
+    </div>
+    <div class="card" id="taskCard">
+        <div class="card-bg" id="taskCardBg"></div>
+        <div class="card-title">📋 今日任务</div>
+        <div class="add-task">
+            <input type="text" id="newTaskInput" placeholder="添加新任务..." onkeypress="handleKeyPress(event)" style="flex:1;">
+            <button class="btn btn-primary" onclick="addTask()">+ 添加</button>
+        </div>
+        <div class="tip">🎯 任务累计30分钟以上标记为完成 | 自动继承昨日任务 | 点击📝编辑备注</div>
+        <ul class="task-list" id="taskList"></ul>
+    </div>
+    <div class="card">
+        <div class="card-title">📊 今日统计</div>
+        <div class="stats">
+            <div class="stat-item"><div class="stat-value" id="totalPomodoros">0</div><div class="stat-label">🍅 番茄钟</div></div>
+            <div class="stat-item"><div class="stat-value" id="totalMinutes">0</div><div class="stat-label">⏱️ 分钟</div></div>
+            <div class="stat-item"><div class="stat-value" id="completedTasks">0</div><div class="stat-label">✅ 完成任务</div></div>
+        </div>
+    </div>
+    <div class="card" id="reviewCard">
+        <div class="card-bg" id="reviewCardBg"></div>
+        <div class="card-title">📈 复盘总结</div>
+        <div class="review-tabs">
+            <button class="review-tab active" onclick="switchReviewTab('week')">本周复盘</button>
+            <button class="review-tab" onclick="switchReviewTab('month')">本月复盘</button>
+        </div>
+        <div class="review-date-info" id="reviewDateInfo" style="text-align:center;margin-bottom:15px;color:var(--text-light);font-size:14px;"></div>
+        <div class="review-stats" id="reviewStats"></div>
+        <textarea class="modal-textarea review-editor" id="reviewContent" placeholder="在这里写下你的复盘总结、感悟和计划..."></textarea>
+        <div class="review-actions review-editor">
+            <button class="btn btn-secondary" onclick="copyReviewData()">📋 复制数据</button>
+            <button class="btn btn-secondary" onclick="clearReview()">清空</button>
+            <button class="btn btn-primary" onclick="saveReview()">💾 保存复盘</button>
+        </div>
+        <div class="review-history">
+            <div class="review-history-title">📚 历史复盘记录</div>
+            <div class="review-history-list" id="reviewHistoryList"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="manualTimeModal">
+    <div class="modal-content">
+        <div class="modal-title">⏱️ 设置任务时长</div>
+        <p class="modal-hint" style="margin-bottom:15px;">直接设置任务当日总时长，输入0清空该任务进度</p>
+        <input type="number" class="modal-input" id="manualMinutes" placeholder="请输入分钟数" min="0" max="1800">
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeModal('manualTimeModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveManualTime()">确认</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="taskNoteModal">
+    <div class="modal-content">
+        <div class="modal-title">📝 任务备注</div>
+        <p id="taskNoteTaskName" style="color: var(--text-light); margin-bottom: 15px;"></p>
+        <textarea class="modal-textarea" id="taskNoteContent" placeholder="例如：阅读《书名》、学习第X章、编程项目名称..."></textarea>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeModal('taskNoteModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveTaskNote()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="settingsModal">
+    <div class="modal-content">
+        <div class="modal-title">⚙️ 个人设置</div>
+        <div class="modal-section">
+            <div class="modal-section-title">👤 基本信息</div>
+            <div class="settings-group"><label class="settings-label">昵称</label><input type="text" class="settings-input" id="usernameInput" placeholder="请输入昵称" maxlength="20"></div>
+            <div class="settings-group"><label class="settings-label">个性签名</label><input type="text" class="settings-input" id="signatureInput" placeholder="简短签名" maxlength="50"></div>
+        </div>
+        <div class="modal-section">
+            <div class="modal-section-title">⏱️ 番茄钟设置</div>
+            <div class="settings-row"><label>工作时长:</label><input type="number" id="workDuration" min="1" max="60" value="25"> <span>分钟</span></div>
+            <div class="settings-row"><label>短休息:</label><input type="number" id="shortBreakDuration" min="1" max="30" value="5"> <span>分钟</span></div>
+            <div class="settings-row"><label>长休息:</label><input type="number" id="longBreakDuration" min="1" max="60" value="15"> <span>分钟</span></div>
+        </div>
+        <div class="modal-section">
+            <div class="modal-section-title">🖼️ 背景图设置</div>
+            <div class="settings-group"><label class="settings-label">计时器卡片背景(URL)</label><input type="text" class="settings-input" id="timerBgInput" placeholder="图片URL"><input type="range" class="opacity-slider" id="timerOpacity" min="0" max="100" value="15" oninput="updateBgOpacity('timer', this.value)"></div>
+            <div class="settings-group"><label class="settings-label">任务卡片背景(URL)</label><input type="text" class="settings-input" id="taskBgInput" placeholder="图片URL"><input type="range" class="opacity-slider" id="taskOpacity" min="0" max="100" value="15" oninput="updateBgOpacity('task', this.value)"></div>
+            <div class="settings-group"><label class="settings-label">复盘卡片背景(URL)</label><input type="text" class="settings-input" id="reviewBgInput" placeholder="图片URL"><input type="range" class="opacity-slider" id="reviewOpacity" min="0" max="100" value="15" oninput="updateBgOpacity('review', this.value)"></div>
+        </div>
+        <div class="modal-section">
+            <div class="modal-section-title">🎨 主题设置</div>
+            <div class="settings-row">
+                <button class="btn btn-primary" onclick="setTheme('default')">紫色默认</button>
+                <button class="btn btn-secondary" onclick="setTheme('light')">浅色</button>
+                <button class="btn btn-secondary" onclick="setTheme('dark')">深色</button>
+            </div>
+        </div>
+        <div class="modal-section">
+            <div class="modal-section-title">💾 数据管理</div>
+            <div class="settings-row">
+                <button class="btn btn-primary" onclick="exportData()">📤 导出</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+            </div>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空所有数据</button>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeModal('settingsModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+        </div>
+    </div>
+</div>
+
+<div class="calendar-modal" id="calendarModal">
+    <div class="calendar-content">
+        <div class="calendar-header">
+            <div class="calendar-nav"><button onclick="changeCalendarMonth(-1)">◀</button><button onclick="changeCalendarMonth(1)">▶</button></div>
+            <div class="calendar-title" id="calendarTitle">2024年1月</div>
+            <button onclick="closeCalendarModal()" style="padding:8px 15px;border:none;border-radius:10px;background:#f0f0f0;cursor:pointer;">✕</button>
+        </div>
+        <div class="calendar-grid">
+            <div class="calendar-weekday">日</div><div class="calendar-weekday">一</div><div class="calendar-weekday">二</div><div class="calendar-weekday">三</div><div class="calendar-weekday">四</div><div class="calendar-weekday">五</div><div class="calendar-weekday">六</div>
+        </div>
+        <div class="calendar-grid" id="calendarDays"></div>
+        <div class="calendar-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#27ae60;"></div><span>已完成</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f39c12;"></div><span>进行中</span></div>
+            <div class="legend-item"><div class="legend-dot" style="background:#eee;"></div><span>未开始</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const defaultTasks = ['运动', '学习', '阅读', '写作', '编程', '冥想', '英语'];
+const COMPLETE_THRESHOLD = 30;
+let settings = { workDuration: 25, shortBreakDuration: 5, longBreakDuration: 15, username: '', signature: '', suffix: '的番茄小清单', theme: 'default', backgrounds: { timer: { url: '', opacity: 15 }, task: { url: '', opacity: 15 }, review: { url: '', opacity: 15 } } };
+let currentMode = 'work';
+let currentTime = 25 * 60;
+let isRunning = false, isPaused = false, timerInterval = null, selectedTask = 'free';
+let currentDate = new Date().toISOString().split('T')[0];
+let currentReviewTab = 'week';
+let calendarYear = new Date().getFullYear(), calendarMonth = new Date().getMonth();
+let data = { tasks: {}, taskTime: {}, taskNotes: {}, taskTags: {}, reviews: {}, skipLogs: {}, disabledInherit: {} };
+let reviewEditorExpanded = false;
+
+function init() {
+    loadData(); loadSettings(); applyTheme(); applyBackgrounds(); updatePageTitle();
+    checkAndInheritTasks();
+    renderDateSelector(); renderTaskButtons(); renderTaskList(); updateStats();
+    updateTimerDisplay(); renderReview(); renderReviewHistory(); renderTrendChart();
+    requestNotificationPermission();
+}
+
+function loadData() {
+    const saved = localStorage.getItem('pomodoroData');
+    if (saved) data = { ...data, ...JSON.parse(saved) };
+    if (!data.tasks[currentDate]) data.tasks[currentDate] = [...defaultTasks];
+    if (!data.taskTime[currentDate]) data.taskTime[currentDate] = {};
+    if (!data.taskNotes[currentDate]) data.taskNotes[currentDate] = {};
+    if (!data.taskTags[currentDate]) data.taskTags[currentDate] = {};
+    if (!data.disabledInherit) data.disabledInherit = {};
+}
+
+function saveData() { localStorage.setItem('pomodoroData', JSON.stringify(data)); }
+
+function loadSettings() {
+    const saved = localStorage.getItem('pomodoroSettings');
+    if (saved) settings = { ...settings, ...JSON.parse(saved) };
+    currentTime = settings.workDuration * 60;
+}
+
+function saveSettings() { localStorage.setItem('pomodoroSettings', JSON.stringify(settings)); }
+
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+}
+
+function sendNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') new Notification(title, { body, icon: '🍅' });
+}
+
+function setTheme(theme) { settings.theme = theme; document.body.className = theme + '-theme'; saveSettings(); }
+function applyTheme() { document.body.className = settings.theme + '-theme'; }
+
+function applyBackgrounds() {
+    ['timer', 'task', 'review'].forEach(card => {
+        const bg = settings.backgrounds[card];
+        const bgElement = document.getElementById(card + 'CardBg');
+        if (bg.url) { bgElement.style.backgroundImage = `url('${bg.url}')`; bgElement.style.setProperty('--bg-opacity', bg.opacity / 100); }
+        else bgElement.style.backgroundImage = 'none';
+    });
+}
+
+function updateBgOpacity(card, value) { settings.backgrounds[card].opacity = parseInt(value); applyBackgrounds(); }
+
+function updatePageTitle() {
+    const title = document.getElementById('pageTitle'), subtitle = document.getElementById('headerSubtitle');
+    title.textContent = settings.username ? `🍅 ${settings.username}${settings.suffix}` : '🍅 番茄打卡';
+    subtitle.textContent = settings.signature || '';
+}
+
+function checkAndInheritTasks() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = formatDate(yesterday);
+    const yesterdayTasks = data.tasks[yesterdayStr] || [];
+    const todayTasks = data.tasks[currentDate] || [];
+    if (yesterdayTasks.length > 0 && todayTasks.length === 0) {
+        data.tasks[currentDate] = [...yesterdayTasks];
+        data.taskTime[currentDate] = {};
+        data.taskNotes[currentDate] = {};
+        data.taskTags[currentDate] = { ...(data.taskTags[yesterdayStr] || {}) };
+        saveData();
+    }
+}
+
+function formatDate(date) { return date.toISOString().split('T')[0]; }
+
+function selectDate(date) {
+    currentDate = date;
+    checkAndInheritTasks();
+    renderDateSelector(); renderTaskButtons(); renderTaskList(); updateStats(); renderReview(); renderTrendChart();
+}
+
+function renderDateSelector() {
+    const container = document.getElementById('dateSelector');
+    const dates = [];
+    for (let i = 0; i < 7; i++) { const date = new Date(); date.setDate(date.getDate() - i); dates.push(date); }
+    container.innerHTML = dates.map((date, index) => {
+        const dateStr = formatDate(date), isActive = dateStr === currentDate ? 'active' : '';
+        const label = index === 0 ? '今天' : index === 1 ? '昨天' : `${date.getMonth()+1}/${date.getDate()}`;
+        return `<button class="date-btn ${isActive}" onclick="selectDate('${dateStr}')">${label}</button>`;
+    }).join('');
+}
+
+function openCalendarModal() { renderCalendar(); document.getElementById('calendarModal').classList.add('show'); }
+function closeCalendarModal() { document.getElementById('calendarModal').classList.remove('show'); }
+
+function changeCalendarMonth(delta) {
+    calendarMonth += delta;
+    if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+    else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+    renderCalendar();
+}
+
+function renderCalendar() {
+    document.getElementById('calendarTitle').textContent = `${calendarYear}年${calendarMonth + 1}月`;
+    const container = document.getElementById('calendarDays');
+    const firstDay = new Date(calendarYear, calendarMonth, 1);
+    const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+    const startWeekday = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+    let html = '';
+    const today = formatDate(new Date());
+    for (let i = 0; i < startWeekday; i++) html += '<div class="calendar-day other-month"></div>';
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isToday = dateStr === today, isSelected = dateStr === currentDate;
+        const pomoCount = getPomodoroCount(dateStr), taskCount = getCompletedTaskCount(dateStr), totalMinutes = getTotalMinutes(dateStr);
+        let classes = 'calendar-day' + (isToday ? ' today' : '') + (isSelected ? ' selected' : '');
+        let heatLevel = Math.min(4, Math.floor(totalMinutes / 30));
+        const heatColors = ['#eee', '#c6f6d5', '#9ae6b4', '#68d391', '#38a169'];
+        let heatmap = totalMinutes > 0 ? `<div class="calendar-heatmap">${[0,1,2,3].map(i => `<div class="heatmap-bar" style="background:${i < heatLevel ? heatColors[heatLevel] : '#eee'}"></div>`).join('')}</div>` : '';
+        html += `<div class="${classes}" onclick="selectDateFromCalendar('${dateStr}')"><span>${day}</span><div class="pomo-info">${pomoCount > 0 ? `<span class="pomo-count">🍅${pomoCount}</span>` : ''}${taskCount > 0 ? `<span class="task-check">✓</span>` : ''}</div>${heatmap}</div>`;
+    }
+    container.innerHTML = html;
+}
+
+function selectDateFromCalendar(date) { selectDate(date); closeCalendarModal(); }
+function getPomodoroCount(dateStr) { const t = data.taskTime[dateStr] || {}; let m = 0; Object.values(t).forEach(x => m += x); return Math.floor(m / 25); }
+function getTotalMinutes(dateStr) { const t = data.taskTime[dateStr] || {}; let m = 0; Object.values(t).forEach(x => m += x); return m; }
+function getCompletedTaskCount(dateStr) { const t = data.taskTime[dateStr] || {}; let c = 0; Object.values(t).forEach(m => { if (m >= COMPLETE_THRESHOLD) c++; }); return c; }
+
+function renderTaskButtons() {
+    const container = document.getElementById('taskSelector');
+    const dateTasks = data.tasks[currentDate] || [];
+    container.innerHTML = dateTasks.map(task => {
+        const isActive = task === selectedTask ? 'active' : '';
+        return `<button class="task-btn ${isActive}" data-task="${task}" onclick="selectTask('${task}')">${getTaskIcon(task)} ${task}</button>`;
+    }).join('');
+}
+
+function getTaskIcon(task) { const icons = { '运动': '🏃', '学习': '📚', '阅读': '📖', '写作': '✍️', '编程': '💻', '冥想': '🧘', '英语': '🗣️', 'free': '🌟' }; return icons[task] || '📌'; }
+
+function selectTask(task) { selectedTask = task; document.querySelectorAll('.task-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.task === task); }); }
+
+function renderTaskList() {
+    const container = document.getElementById('taskList');
+    const dateTasks = data.tasks[currentDate] || [];
+    const dateTaskTime = data.taskTime[currentDate] || {};
+    const dateTaskNotes = data.taskNotes[currentDate] || {};
+    const dateTags = data.taskTags[currentDate] || {};
+    if (dateTasks.length === 0) { container.innerHTML = '<li class="task-item"><div class="task-info">暂无任务</div></li>'; return; }
+    const completed = [], inProgress = [];
+    dateTasks.forEach(task => { const m = dateTaskTime[task] || 0; (m >= COMPLETE_THRESHOLD ? completed : inProgress).push(task); });
+    let html = '';
+    if (inProgress.length > 0) { html += '<div class="task-section-title">进行中</div>'; html += inProgress.map(t => renderTaskItem(t, dateTaskTime, dateTaskNotes, dateTags)).join(''); }
+    if (completed.length > 0) { html += '<div class="task-section-title">已完成 ✓</div>'; html += completed.map(t => renderTaskItem(t, dateTaskTime, dateTaskNotes, dateTags)).join(''); }
+    container.innerHTML = html;
+}
+
+function renderTaskItem(task, taskTime, notes, tags) {
+    const m = taskTime[task] || 0;
+    const progress = Math.min((m / COMPLETE_THRESHOLD) * 100, 100);
+    const isCompleted = m >= COMPLETE_THRESHOLD;
+    const icon = getTaskIcon(task);
+    const note = notes[task] || '';
+    const hasNote = note.trim().length > 0;
+    const inheritDisabled = data.disabledInherit && data.disabledInherit[task];
+    return `<li class="task-item ${isCompleted ? 'completed' : ''}"><div class="task-main"><div class="task-info"><div class="task-name">${icon} ${task}${hasNote ? '<button class="toggle-note-btn" onclick="toggleNote(this)">📝</button>' : ''}${!inheritDisabled && currentDate !== formatDate(new Date()) ? `<span class="inherit-toggle" onclick="toggleInherit('${task}')" title="关闭后不再自动继承">🔄</span>` : ''}</div><div class="task-time">累计: ${m} 分钟<span class="progress-tooltip">(${(progress).toFixed(0)}%)</span></div><div class="task-progress"><div class="task-progress-bar" style="width:${progress}%"></div></div></div><div class="task-actions"><button class="task-btn-small btn-edit" onclick="openTaskNoteModal('${task}')">📝</button><button class="task-btn-small btn-manual" onclick="openManualModal('${task}')">⏱️</button><button class="task-btn-small btn-delete" onclick="deleteTask('${task}')">删除</button></div></div>${hasNote ? `<div class="task-note show"><div class="task-note-content">${note}</div></div>` : ''}</li>`;
+}
+
+function toggleNote(btn) { const noteDiv = btn.closest('.task-item').querySelector('.task-note'); if (noteDiv) noteDiv.classList.toggle('show'); }
+
+function toggleInherit(task) {
+    if (!data.disabledInherit) data.disabledInherit = {};
+    data.disabledInherit[task] = !data.disabledInherit[task];
+    saveData();
+    renderTaskList();
+}
+
+function addTask() {
+    const input = document.getElementById('newTaskInput');
+    const taskName = input.value.trim();
+    if (!taskName) return;
+    const dateTasks = data.tasks[currentDate] || [];
+    if (!dateTasks.includes(taskName)) {
+        dateTasks.push(taskName);
+        data.tasks[currentDate] = dateTasks;
+        data.taskTime[currentDate][taskName] = 0;
+        saveData(); renderTaskButtons(); renderTaskList();
+    }
+    input.value = '';
+}
+
+function handleKeyPress(event) { if (event.key === 'Enter') addTask(); }
+
+function deleteTask(task) {
+    if (confirm(`确定删除任务"${task}"吗？`)) {
+        const dateTasks = data.tasks[currentDate], index = dateTasks.indexOf(task);
+        if (index > -1) {
+            dateTasks.splice(index, 1);
+            delete data.taskTime[currentDate][task];
+            delete data.taskNotes[currentDate][task];
+            delete data.taskTags[currentDate]?.[task];
+            saveData(); renderTaskButtons(); renderTaskList(); updateStats();
+        }
+    }
+}
+
+function startTimer() {
+    if (!isRunning) { isRunning = true; isPaused = false; document.getElementById('timerCircle').classList.add('running'); document.getElementById('startBtn').disabled = true; document.getElementById('pauseBtn').disabled = false; timerInterval = setInterval(timerTick, 1000); }
+    else if (isPaused) { isPaused = false; document.getElementById('startBtn').disabled = true; document.getElementById('pauseBtn').disabled = false; }
+}
+
+function pauseTimer() { if (isRunning && !isPaused) { isPaused = true; document.getElementById('startBtn').disabled = false; document.getElementById('pauseBtn').disabled = true; } }
+
+function resetTimer() {
+    clearInterval(timerInterval); isRunning = false; isPaused = false; currentMode = 'work'; currentTime = settings.workDuration * 60;
+    document.getElementById('timerCircle').classList.remove('running');
+    document.getElementById('startBtn').disabled = false; document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('skipReasonPanel').classList.remove('show'); updateTimerDisplay();
+}
+
+function showSkipReasons() { document.getElementById('skipReasonPanel').classList.add('show'); }
+
+function skipWithReason(reason) {
+    if (!data.skipLogs[currentDate]) data.skipLogs[currentDate] = [];
+    data.skipLogs[currentDate].push({ time: new Date().toISOString(), reason: reason, task: selectedTask });
+    saveData(); skipSession();
+}
+
+function skipSession() {
+    clearInterval(timerInterval); isRunning = false; isPaused = false;
+    currentMode = currentMode === 'work' ? 'short_break' : 'work';
+    currentTime = currentMode === 'work' ? settings.workDuration * 60 : settings.shortBreakDuration * 60;
+    document.getElementById('timerCircle').classList.remove('running');
+    document.getElementById('startBtn').disabled = false; document.getElementById('pauseBtn').disabled = true;
+    document.getElementById('skipReasonPanel').classList.remove('show'); updateTimerDisplay();
+}
+
+function timerTick() {
+    if (!isPaused) { currentTime--; updateTimerDisplay(); if (currentTime <= 0) onTimerComplete(); }
+}
+
+function updateTimerDisplay() {
+    const m = Math.floor(currentTime / 60), s = currentTime % 60;
+    document.getElementById('timerTime').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const modeText = { 'work': '工作时间', 'short_break': '短休息', 'long_break': '长休息' };
+    document.getElementById('timerMode').textContent = modeText[currentMode];
+}
+
+function onTimerComplete() {
+    clearInterval(timerInterval); playNotificationSound();
+    sendNotification('🍅 番茄钟', currentMode === 'work' ? '工作时间结束！休息一下吧！' : '休息结束！开始工作！');
+    if (currentMode === 'work') {
+        if (selectedTask && selectedTask !== 'free') {
+            if (!data.taskTime[currentDate][selectedTask]) data.taskTime[currentDate][selectedTask] = 0;
+            data.taskTime[currentDate][selectedTask] += settings.workDuration;
+            saveData(); renderTaskList(); updateStats(); renderCalendar(); renderReview(); renderTrendChart();
+        }
+        alert('🎉 ' + settings.workDuration + '分钟工作完成！开始休息吧！'); currentMode = 'short_break'; currentTime = settings.shortBreakDuration * 60;
+    } else { alert('☕ 休息结束！准备开始工作！'); currentMode = 'work'; currentTime = settings.workDuration * 60; }
+    isRunning = false; isPaused = false;
+    document.getElementById('timerCircle').classList.remove('running');
+    document.getElementById('startBtn').disabled = false; document.getElementById('pauseBtn').disabled = true;
+    updateTimerDisplay(); renderTaskList(); updateStats(); renderReview(); renderTrendChart();
+}
+
+function playNotificationSound() {
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 800; osc.type = 'sine'; gain.gain.value = 0.3; osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, 200); } catch(e) {}
+}
+
+let manualTaskName = '';
+function openManualModal(task) {
+    manualTaskName = task;
+    const currentMinutes = data.taskTime[currentDate]?.[task] || 0;
+    document.getElementById('manualMinutes').value = currentMinutes;
+    document.getElementById('manualTimeModal').classList.add('show');
+    document.getElementById('manualMinutes').focus();
+}
+
+function saveManualTime() {
+    const minutes = parseInt(document.getElementById('manualMinutes').value);
+    if (isNaN(minutes) || minutes < 0) { alert('请输入有效的分钟数'); return; }
+    // 确保数据结构存在
+    if (!data.taskTime) data.taskTime = {};
+    if (!data.taskTime[currentDate]) data.taskTime[currentDate] = {};
+    data.taskTime[currentDate][manualTaskName] = minutes;
+    saveData();
+    renderTaskList();
+    updateStats();
+    renderCalendar();
+    renderReview();
+    renderTrendChart();
+    closeModal('manualTimeModal');
+    showTip('时长已更新 ✓');
+}
+
+function showTip(msg) {
+    const tip = document.querySelector('.tip.success');
+    if (tip) tip.remove();
+    const newTip = document.createElement('div');
+    newTip.className = 'tip success';
+    newTip.textContent = msg;
+    document.querySelector('.card').insertBefore(newTip, document.querySelector('.card').firstChild);
+    setTimeout(() => newTip.remove(), 2000);
+}
+
+let editingTaskName = '';
+function openTaskNoteModal(task) { editingTaskName = task; document.getElementById('taskNoteTaskName').textContent = `任务：${task}`; document.getElementById('taskNoteContent').value = (data.taskNotes[currentDate] && data.taskNotes[currentDate][task]) || ''; document.getElementById('taskNoteModal').classList.add('show'); }
+
+function saveTaskNote() {
+    const note = document.getElementById('taskNoteContent').value;
+    if (!data.taskNotes[currentDate]) data.taskNotes[currentDate] = {};
+    data.taskNotes[currentDate][editingTaskName] = note;
+    saveData(); renderTaskList(); closeModal('taskNoteModal');
+}
+
+function openSettingsModal() {
+    document.getElementById('usernameInput').value = settings.username || '';
+    document.getElementById('signatureInput').value = settings.signature || '';
+    document.getElementById('workDuration').value = settings.workDuration;
+    document.getElementById('shortBreakDuration').value = settings.shortBreakDuration;
+    document.getElementById('longBreakDuration').value = settings.longBreakDuration;
+    document.getElementById('timerBgInput').value = settings.backgrounds.timer.url || '';
+    document.getElementById('taskBgInput').value = settings.backgrounds.task.url || '';
+    document.getElementById('reviewBgInput').value = settings.backgrounds.review.url || '';
+    document.getElementById('timerOpacity').value = settings.backgrounds.timer.opacity;
+    document.getElementById('taskOpacity').value = settings.backgrounds.task.opacity;
+    document.getElementById('reviewOpacity').value = settings.backgrounds.review.opacity;
+    document.getElementById('settingsModal').classList.add('show');
+}
+
+function saveSettings() {
+    settings.username = document.getElementById('usernameInput').value.trim();
+    settings.signature = document.getElementById('signatureInput').value.trim();
+    settings.workDuration = parseInt(document.getElementById('workDuration').value) || 25;
+    settings.shortBreakDuration = parseInt(document.getElementById('shortBreakDuration').value) || 5;
+    settings.longBreakDuration = parseInt(document.getElementById('longBreakDuration').value) || 15;
+    settings.backgrounds.timer.url = document.getElementById('timerBgInput').value;
+    settings.backgrounds.task.url = document.getElementById('taskBgInput').value;
+    settings.backgrounds.review.url = document.getElementById('reviewBgInput').value;
+    saveSettings(); applyBackgrounds(); updatePageTitle();
+    currentTime = settings.workDuration * 60; updateTimerDisplay();
+    closeModal('settingsModal');
+}
+
+function exportData() {
+    const exportObj = { data, settings };
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `pomodoro-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (imported.data) data = imported.data;
+            if (imported.settings) settings = { ...settings, ...imported.settings };
+            saveData(); saveSettings(); alert('数据导入成功！'); location.reload();
+        } catch(err) { alert('导入失败，请检查文件格式'); }
+    };
+    reader.readAsText(file);
+}
+
+function clearAllData() { if (confirm('确定清空所有数据吗？此操作不可恢复！')) { localStorage.removeItem('pomodoroData'); localStorage.removeItem('pomodoroSettings'); location.reload(); } }
+
+function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
+
+function updateStats() {
+    const dateTaskTime = data.taskTime[currentDate] || {};
+    let totalPomodoros = 0, totalMinutes = 0, completedTasks = 0;
+    Object.values(dateTaskTime).forEach(m => { totalMinutes += m; totalPomodoros += Math.floor(m / 25); if (m >= COMPLETE_THRESHOLD) completedTasks++; });
+    document.getElementById('totalPomodoros').textContent = totalPomodoros;
+    document.getElementById('totalMinutes').textContent = totalMinutes;
+    document.getElementById('completedTasks').textContent = completedTasks;
+}
+
+function renderTrendChart() {
+    const container = document.getElementById('trendBars');
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    const today = new Date();
+    let maxMinutes = 0;
+    const weekData = [];
+    for (let i = 6; i >= 0; i--) { const date = new Date(); date.setDate(today.getDate() - i); const minutes = getTotalMinutes(formatDate(date)); weekData.push({ day: days[date.getDay()], minutes }); maxMinutes = Math.max(maxMinutes, minutes); }
+    if (maxMinutes === 0) maxMinutes = 60;
+    container.innerHTML = weekData.map(d => `<div class="trend-bar-container"><div class="trend-bar" style="height:${(d.minutes / maxMinutes) * 60}px"></div><div class="trend-label">${d.day}</div></div>`).join('');
+}
+
+function switchReviewTab(tab) {
+    currentReviewTab = tab;
+    document.querySelectorAll('.review-tab').forEach((btn, i) => { btn.classList.toggle('active', (tab === 'week' && i === 0) || (tab === 'month' && i === 1)); });
+    renderReview(); renderReviewHistory();
+}
+
+function renderReview() {
+    const dateInfo = document.getElementById('reviewDateInfo');
+    const statsContainer = document.getElementById('reviewStats');
+    let startDate, endDate, dateRange;
+    if (currentReviewTab === 'week') {
+        const now = new Date(), dayOfWeek = now.getDay();
+        startDate = new Date(now); startDate.setDate(now.getDate() - dayOfWeek);
+        endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+        dateRange = `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
+    } else {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        dateRange = `${startDate.getFullYear()}年${startDate.getMonth() + 1}月`;
+    }
+    dateInfo.textContent = dateRange;
+    
+    // 统计任务详情
+    const taskStats = {};
+    
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = formatDate(new Date(d));
+        const taskTime = data.taskTime[dateStr] || {};
+        
+        Object.entries(taskTime).forEach(([task, minutes]) => {
+            if (!taskStats[task]) taskStats[task] = { totalMinutes: 0, completeDays: 0 };
+            taskStats[task].totalMinutes += minutes;
+            if (minutes >= COMPLETE_THRESHOLD) {
+                taskStats[task].completeDays++;
+            }
+        });
+    }
+    
+    // 生成任务详情HTML
+    let taskDetailsHtml = '';
+    const sortedTasks = Object.entries(taskStats).sort((a, b) => b[1].totalMinutes - a[1].totalMinutes);
+    if (sortedTasks.length > 0) {
+        taskDetailsHtml = '<div style="margin-top:15px;padding-top:15px;border-top:1px solid #eee;"><div style="font-weight:bold;margin-bottom:10px;color:var(--text);">📋 任务详情</div>';
+        sortedTasks.forEach(([task, stats]) => {
+            const icon = getTaskIcon(task);
+            taskDetailsHtml += `<div style="display:flex;justify-content:space-between;padding:10px;background:rgba(0,0,0,0.02);border-radius:8px;margin-bottom:8px;">
+                <span>${icon} ${task}</span>
+                <span style="color:var(--text-light);">${stats.totalMinutes}分钟 | ${stats.completeDays}天</span>
+            </div>`;
+        });
+        taskDetailsHtml += '</div>';
+    }
+    
+    statsContainer.innerHTML = taskDetailsHtml;
+    
+    const reviewKey = `${currentReviewTab}_${dateRange}`;
+    document.getElementById('reviewContent').value = data.reviews[reviewKey] || '';
+}
+
+function renderComparison() {
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    let thisMonthTotal = 0, lastMonthTotal = 0, thisDays = 0, lastDays = 0;
+    for (let d = new Date(thisMonthStart); d <= now; d.setDate(d.getDate() + 1)) { const m = getTotalMinutes(formatDate(d)); thisMonthTotal += m; if (m > 0) thisDays++; }
+    for (let d = new Date(lastMonthStart); d <= lastMonthEnd; d.setDate(d.getDate() + 1)) { const m = getTotalMinutes(formatDate(d)); lastMonthTotal += m; if (m > 0) lastDays++; }
+    const thisAvg = thisDays > 0 ? Math.round(thisMonthTotal / thisDays) : 0;
+    const lastAvg = lastDays > 0 ? Math.round(lastMonthTotal / lastDays) : 0;
+    const diff = thisAvg - lastAvg;
+    document.getElementById('lastMonthAvg').textContent = lastAvg + '分钟';
+    document.getElementById('thisMonthAvg').textContent = thisAvg + '分钟';
+    const diffEl = document.getElementById('monthDiff');
+    diffEl.textContent = diff >= 0 ? `↑${diff}分钟` : `↓${Math.abs(diff)}分钟`;
+    diffEl.className = 'comparison-diff ' + (diff >= 0 ? 'positive' : 'negative');
+}
+
+function saveReview() {
+    const dateInfo = document.getElementById('reviewDateInfo').textContent;
+    const content = document.getElementById('reviewContent').value;
+    const reviewKey = `${currentReviewTab}_${dateInfo}`;
+    data.reviews[reviewKey] = content;
+    saveData();
+    renderReviewHistory();
+    // 保存后自动折叠编辑器
+    document.querySelectorAll('.review-editor').forEach(el => el.classList.add('hidden'));
+    showTip('复盘已保存 ✓');
+}
+
+function expandEditor() {
+    document.querySelectorAll('.review-editor').forEach(el => el.classList.remove('hidden'));
+}
+
+function clearReview() { if (confirm('确定清空复盘内容吗？')) document.getElementById('reviewContent').value = ''; }
+
+function copyReviewData() {
+    const dateInfo = document.getElementById('reviewDateInfo').textContent;
+    const content = document.getElementById('reviewContent').value;
+    const stats = document.getElementById('reviewStats').innerText;
+    const text = `【番茄打卡 - ${dateInfo}】\n\n${stats}\n\n【复盘内容】\n${content}`;
+    navigator.clipboard.writeText(text).then(() => showTip('数据已复制 ✓')).catch(() => alert('复制失败'));
+}
+
+function renderReviewHistory() {
+    const container = document.getElementById('reviewHistoryList');
+    const history = [];
+    Object.keys(data.reviews || {}).forEach(key => {
+        const parts = key.split('_');
+        if (parts[0] === currentReviewTab) {
+            const content = data.reviews[key] || '';
+            const summary = calculateReviewSummary(parts[1]);
+            history.push({ key, period: parts[1], content, ...summary });
+        }
+    });
+    history.sort((a, b) => b.period.localeCompare(a.period));
+    
+    if (history.length === 0) { container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">暂无历史复盘，点击上方编辑框记录</div>'; return; }
+    
+    // 按年-月分组
+    const grouped = {};
+    history.forEach(h => {
+        let year, month;
+        if (h.period.includes('~')) {
+            const d = new Date(h.period.split(' ~ ')[0]);
+            year = d.getFullYear();
+            month = d.getMonth() + 1;
+        } else {
+            const match = h.period.match(/(\d+)年(\d+)月/);
+            if (match) { year = parseInt(match[1]); month = parseInt(match[2]); }
+        }
+        if (!grouped[year]) grouped[year] = {};
+        if (!grouped[year][month]) grouped[year][month] = [];
+        grouped[year][month].push(h);
+    });
+    
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    
+    let html = '';
+    Object.keys(grouped).sort((a,b) => b - a).forEach(year => {
+        const yearKey = String(year);
+        const yearExpanded = getCollapseState(year, null);
+        html += `<div class="review-year-group" data-year="${yearKey}">
+            <div class="review-year-header" onclick="toggleYear('${yearKey}')">
+                <span class="review-year-title">${year}年</span>
+                <span class="review-year-toggle" id="year-toggle-${yearKey}">${yearExpanded ? '▼' : '▶'}</span>
+            </div>
+            <div class="review-month-group" id="year-${yearKey}-months" style="display:${yearExpanded ? 'block' : 'none'}">`;
+        
+        Object.keys(grouped[year]).sort((a,b) => b - a).forEach(month => {
+            const monthKey = String(month);
+            const monthExpanded = getCollapseState(year, month);
+            html += `<div class="review-month-group" data-year="${yearKey}" data-month="${monthKey}">
+                <div class="review-month-header" onclick="toggleMonth('${yearKey}', '${monthKey}')">
+                    <span class="review-month-title">${month}月</span>
+                    <span class="review-year-toggle" id="month-toggle-${yearKey}-${monthKey}">${monthExpanded ? '▼' : '▶'}</span>
+                </div>
+                <div class="review-items" id="month-${yearKey}-${monthKey}-items" style="display:${monthExpanded ? 'block' : 'none'}">`;
+            
+            grouped[year][month].forEach(h => {
+                let taskSummary = '';
+                if (h.taskDetails) {
+                    const topTasks = Object.entries(h.taskDetails).sort((a, b) => b[1].totalMinutes - a[1].totalMinutes).slice(0, 3);
+                    taskSummary = topTasks.map(([task, stats]) => `${getTaskIcon(task)}${stats.totalMinutes}分钟`).join(' ');
+                }
+                html += `<div class="review-history-item" onclick="loadReview('${h.key}')">
+                    <div class="review-history-header">
+                        <span class="review-history-period">${h.period}</span>
+                        <div class="review-history-actions">
+                            <button class="review-history-btn btn-danger" onclick="event.stopPropagation();deleteReview('${h.key}')">删除</button>
+                        </div>
+                    </div>
+                    <div class="review-history-summary">🍅${h.pomodoros}个 | ⏱️${h.minutes}分钟 | ✅${h.tasks}天</div>
+                    ${taskSummary ? `<div class="review-history-preview">${taskSummary}</div>` : ''}
+                    ${h.content ? `<div class="review-history-preview">📝${h.content.substring(0, 30)}${h.content.length > 30 ? '...' : ''}</div>` : ''}
+                </div>`;
+            });
+            html += '</div></div>';
+        });
+        html += '</div></div>';
+    });
+    container.innerHTML = html;
+}
+
+function toggleYear(yearKey) {
+    // 切换年份展开状态并保存
+    const monthsContainer = document.getElementById('year-' + yearKey + '-months');
+    const toggle = document.getElementById('year-toggle-' + yearKey);
+    if (!monthsContainer) return;
+    
+    const currentDisplay = monthsContainer.style.display;
+    const isCurrentlyHidden = currentDisplay === 'none' || currentDisplay === '';
+    const newDisplay = isCurrentlyHidden ? 'block' : 'none';
+    
+    monthsContainer.style.display = newDisplay;
+    if (toggle) toggle.textContent = isCurrentlyHidden ? '▼' : '▶';
+    
+    // 保存状态
+    const year = parseInt(yearKey);
+    saveCollapseState(year, null, !isCurrentlyHidden);
+}
+
+function toggleMonth(yearKey, monthKey) {
+    const itemsContainer = document.getElementById('month-' + yearKey + '-' + monthKey + '-items');
+    const toggle = document.getElementById('month-toggle-' + yearKey + '-' + monthKey);
+    if (!itemsContainer) return;
+    
+    const currentDisplay = itemsContainer.style.display;
+    const isCurrentlyHidden = currentDisplay === 'none' || currentDisplay === '';
+    const newDisplay = isCurrentlyHidden ? 'block' : 'none';
+    
+    itemsContainer.style.display = newDisplay;
+    if (toggle) toggle.textContent = isCurrentlyHidden ? '▼' : '▶';
+    
+    // 保存状态
+    const year = parseInt(yearKey);
+    const month = parseInt(monthKey);
+    saveCollapseState(year, month, !isCurrentlyHidden);
+}
+
+function saveCollapseState(year, month, expanded) {
+    const yearKey = String(year);
+    if (!settings.collapseState) settings.collapseState = {};
+    if (!settings.collapseState.years) settings.collapseState.years = {};
+    if (month === null) {
+        settings.collapseState.years[yearKey] = expanded;
+    } else {
+        const monthKey = String(month);
+        if (!settings.collapseState.years[yearKey]) settings.collapseState.years[yearKey] = {};
+        settings.collapseState.years[yearKey][monthKey] = expanded;
+    }
+    saveSettings();
+}
+
+function getCollapseState(year, month) {
+    const yearKey = String(year);
+    if (!settings.collapseState || !settings.collapseState.years || settings.collapseState.years[yearKey] === undefined) {
+        // 默认展开当前年
+        return year === new Date().getFullYear();
+    }
+    if (month === null) {
+        return settings.collapseState.years[yearKey] !== false;
+    }
+    const monthKey = String(month);
+    return settings.collapseState.years[yearKey]?.[monthKey] !== false;
+}
+
+function calculateReviewSummary(periodStr) {
+    let startDate, endDate;
+    if (periodStr.includes('~')) { const [s, e] = periodStr.split(' ~ '); startDate = new Date(s); endDate = new Date(e); }
+    else { const match = periodStr.match(/(\d+)年(\d+)月/); startDate = new Date(match[1], match[2] - 1, 1); endDate = new Date(match[1], match[2], 0); }
+    let pomodoros = 0, minutes = 0, tasks = 0, taskDetails = {};
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = formatDate(d);
+        const taskTime = data.taskTime[dateStr] || {};
+        Object.entries(taskTime).forEach(([task, m]) => {
+            if (!taskDetails[task]) taskDetails[task] = { totalMinutes: 0, completeDays: 0 };
+            taskDetails[task].totalMinutes += m;
+            if (m >= COMPLETE_THRESHOLD) taskDetails[task].completeDays++;
+            minutes += m;
+            if (m >= COMPLETE_THRESHOLD && (taskDetails[task].completeDays === 1 || true)) tasks = Math.max(tasks, Object.keys(taskDetails).length);
+        });
+        pomodoros += Math.floor(minutes / 25);
+    }
+    // 统计完成的任务数（不同任务达标天数总和）
+    let totalCompleteDays = 0;
+    Object.values(taskDetails).forEach(s => { totalCompleteDays += s.completeDays; });
+    return { pomodoros, minutes, tasks: totalCompleteDays, taskDetails };
+}
+
+function loadReview(key) {
+    const review = data.reviews[key];
+    if (review) {
+        document.getElementById('reviewContent').value = review;
+        expandEditor();
+        showTip('已加载复盘内容');
+    }
+}
+
+function deleteReview(key) {
+    if (confirm('确定删除这条复盘记录吗？')) { delete data.reviews[key]; saveData(); renderReviewHistory(); }
+}
+
+init();
+
+        // PWA 初始化
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        
+        // 监听安装提示事件
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // 显示安装按钮
+            if (installBtn) installBtn.style.display = 'inline-block';
+        });
+        
+        // 监听安装完成
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            if (installBtn) installBtn.style.display = 'none';
+        });
+        
+        // 注册 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW注册成功'))
+                    .catch(err => console.log('SW注册失败', err));
+            });
+        }
+        
+        // 手动触发安装
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(result => {
+                    if (result.outcome === 'accepted') {
+                        if (installBtn) installBtn.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        // 检查是否已安装
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (installBtn) installBtn.style.display = 'none';
+        }
+</script>
+</body>
+</html>
