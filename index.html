@@ -370,7 +370,7 @@
 </div>
 
 <script>
-const defaultTasks = ['运动', '学习', '阅读', '写作', '编程', '冥想', '英语'];
+const defaultTasks = ['运动', '学习', '阅读', 'AI Coding', '英语'];
 const COMPLETE_THRESHOLD = 30;
 let settings = { workDuration: 25, shortBreakDuration: 5, longBreakDuration: 15, username: '', signature: '', suffix: '的番茄小清单', theme: 'default', backgrounds: { timer: { url: '', opacity: 15 }, task: { url: '', opacity: 15 }, review: { url: '', opacity: 15 } } };
 let currentMode = 'work';
@@ -726,24 +726,99 @@ function saveSettings() {
 }
 
 function exportData() {
-    const exportObj = { data, settings };
-    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `pomodoro-backup-${new Date().toISOString().split('T')[0]}.json`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+        const exportObj = { data, settings };
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); 
+        a.href = url; 
+        a.download = `pomodoro-backup-${new Date().toISOString().split('T')[0]}.json`; 
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch(err) {
+        console.error('导出错误:', err);
+        alert('导出失败: ' + err.message);
+    }
 }
 
 function importData(input) {
     const file = input.files[0];
     if (!file) return;
+    
+    // 检查文件大小
+    if (file.size > 5 * 1024 * 1024) {
+        alert('文件过大，请选择小于 5MB 的文件');
+        return;
+    }
+    
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const imported = JSON.parse(e.target.result);
-            if (imported.data) data = imported.data;
-            if (imported.settings) settings = { ...settings, ...imported.settings };
-            saveData(); saveSettings(); alert('数据导入成功！'); location.reload();
-        } catch(err) { alert('导入失败，请检查文件格式'); }
+            // 移除可能的 BOM 字符
+            let jsonStr = e.target.result;
+            if (jsonStr.charCodeAt(0) === 0xFEFF) {
+                jsonStr = jsonStr.slice(1);
+            }
+            
+            // 检查文件内容是否为空
+            if (!jsonStr || jsonStr.trim() === '') {
+                throw new Error('文件内容为空');
+            }
+            
+            // 先检查是否是有效的 JSON
+            let imported;
+            try {
+                imported = JSON.parse(jsonStr);
+            } catch (parseErr) {
+                throw new Error('JSON 格式解析失败: ' + parseErr.message);
+            }
+            
+            // 验证导入的数据格式 - 更严格的检查
+            if (!imported) {
+                throw new Error('无效的数据格式：文件内容为空');
+            }
+            if (!imported.data) {
+                throw new Error('无效的数据格式：缺少 data 字段');
+            }
+            if (typeof imported.data !== 'object') {
+                throw new Error('无效的数据格式：data 字段不是对象');
+            }
+            if (Array.isArray(imported.data)) {
+                throw new Error('无效的数据格式：data 字段是数组而非对象');
+            }
+            
+            // 检查 data 对象是否有任务数据
+            const dataKeys = Object.keys(imported.data);
+            if (dataKeys.length === 0) {
+                throw new Error('导入的数据为空，没有任务记录');
+            }
+            
+            // 计算任务记录天数 - 需要检查 tasks 对象内的日期键
+            let taskCount = 0;
+            if (imported.data.tasks && typeof imported.data.tasks === 'object') {
+                taskCount = Object.keys(imported.data.tasks).filter(k => k.match(/^\d{4}-\d{2}-\d{2}$/)).length;
+            }
+            const reviewCount = imported.data.reviews ? Object.keys(imported.data.reviews).length : 0;
+            
+            // 提示用户确认导入
+            if (confirm(`确定要导入数据吗？\n\n数据概览：\n- 任务记录日期：${taskCount} 天\n- 复盘记录：${reviewCount} 条\n\n这将覆盖当前所有数据！`)) {
+                // 直接使用 JSON 序列化/反序列化确保数据正确
+                data = JSON.parse(JSON.stringify(imported.data));
+                if (imported.settings) {
+                    settings = { ...settings, ...imported.settings };
+                }
+                
+                // 直接保存到 localStorage
+                localStorage.setItem('pomodoroData', JSON.stringify(data));
+                localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
+                alert('数据导入成功！');
+                location.reload();
+            }
+        } catch(err) { 
+            console.error('导入错误:', err);
+            alert('导入失败: ' + err.message); 
+        }
     };
     reader.readAsText(file);
 }
