@@ -464,10 +464,11 @@ function selectDate(date) {
 function renderDateSelector() {
     const container = document.getElementById('dateSelector');
     const dates = [];
-    for (let i = 0; i < 7; i++) { const date = new Date(); date.setDate(date.getDate() - i); dates.push(date); }
+    // 只显示今天和昨天
+    for (let i = 0; i < 2; i++) { const date = new Date(); date.setDate(date.getDate() - i); dates.push(date); }
     container.innerHTML = dates.map((date, index) => {
         const dateStr = formatDate(date), isActive = dateStr === currentDate ? 'active' : '';
-        const label = index === 0 ? '今天' : index === 1 ? '昨天' : `${date.getMonth()+1}/${date.getDate()}`;
+        const label = index === 0 ? '今天' : '昨天';
         return `<button class="date-btn ${isActive}" onclick="selectDate('${dateStr}')">${label}</button>`;
     }).join('');
 }
@@ -859,7 +860,10 @@ function renderReview() {
     let startDate, endDate, dateRange;
     if (currentReviewTab === 'week') {
         const now = new Date(), dayOfWeek = now.getDay();
-        startDate = new Date(now); startDate.setDate(now.getDate() - dayOfWeek);
+        // 改为周一到周日 (0=周日, 1=周一, ..., 6=周六)
+        // 如果是周日(0)，则向前取上周一；其他日期向前取本周一
+        const daysToMonday = dayOfWeek === 0 ? -6 : -(dayOfWeek - 1);
+        startDate = new Date(now); startDate.setDate(now.getDate() + daysToMonday);
         endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
         dateRange = `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
     } else {
