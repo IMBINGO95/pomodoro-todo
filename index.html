@@ -243,7 +243,7 @@
     </div>
     <div class="card" id="taskCard">
         <div class="card-bg" id="taskCardBg"></div>
-        <div class="card-title">📋 今日任务</div>
+        <div class="card-title" id="taskCardTitle">📋 今日任务</div>
         <div class="add-task">
             <input type="text" id="newTaskInput" placeholder="添加新任务..." onkeypress="handleKeyPress(event)" style="flex:1;">
             <button class="btn btn-primary" onclick="addTask()">+ 添加</button>
@@ -252,7 +252,7 @@
         <ul class="task-list" id="taskList"></ul>
     </div>
     <div class="card">
-        <div class="card-title">📊 今日统计</div>
+        <div class="card-title" id="statsCardTitle">📊 今日统计</div>
         <div class="stats">
             <div class="stat-item"><div class="stat-value" id="totalPomodoros">0</div><div class="stat-label">🍅 番茄钟</div></div>
             <div class="stat-item"><div class="stat-value" id="totalMinutes">0</div><div class="stat-label">⏱️ 分钟</div></div>
@@ -365,6 +365,9 @@
             <div class="legend-item"><div class="legend-dot" style="background:#f39c12;"></div><span>进行中</span></div>
             <div class="legend-item"><div class="legend-dot" style="background:#eee;"></div><span>未开始</span></div>
         </div>
+        <div style="text-align:center;margin-top:15px;">
+            <button onclick="closeCalendarModal()" style="padding:10px 30px;border:none;border-radius:10px;background:#667eea;color:white;cursor:pointer;font-size:15px;">确定</button>
+        </div>
     </div>
 </div>
 
@@ -384,6 +387,7 @@ let reviewEditorExpanded = false;
 function init() {
     loadData(); loadSettings(); applyTheme(); applyBackgrounds(); updatePageTitle();
     checkAndInheritTasks();
+    updateTaskCardTitle();
     renderDateSelector(); renderTaskButtons(); renderTaskList(); updateStats();
     updateTimerDisplay(); renderReview(); renderReviewHistory(); renderTrendChart();
     requestNotificationPermission();
@@ -457,7 +461,30 @@ function formatDate(date) { return date.toISOString().split('T')[0]; }
 function selectDate(date) {
     currentDate = date;
     checkAndInheritTasks();
+    updateTaskCardTitle();
     renderDateSelector(); renderTaskButtons(); renderTaskList(); updateStats(); renderReview(); renderTrendChart();
+}
+
+function updateTaskCardTitle() {
+    const taskTitleEl = document.getElementById('taskCardTitle');
+    const statsTitleEl = document.getElementById('statsCardTitle');
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    
+    let dateLabel = '';
+    if (currentDate === today) {
+        dateLabel = '今日';
+    } else if (currentDate === yesterday) {
+        dateLabel = '昨日';
+    } else {
+        const d = new Date(currentDate);
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        dateLabel = `${month}月${day}日`;
+    }
+    
+    taskTitleEl.textContent = `📋 ${dateLabel}任务`;
+    statsTitleEl.textContent = `📊 ${dateLabel}统计`;
 }
 
 function renderDateSelector() {
@@ -505,7 +532,7 @@ function renderCalendar() {
     container.innerHTML = html;
 }
 
-function selectDateFromCalendar(date) { selectDate(date); closeCalendarModal(); }
+function selectDateFromCalendar(date) { selectDate(date); }
 function getPomodoroCount(dateStr) { const t = data.taskTime[dateStr] || {}; let m = 0; Object.values(t).forEach(x => m += x); return Math.floor(m / 25); }
 function getTotalMinutes(dateStr) { const t = data.taskTime[dateStr] || {}; let m = 0; Object.values(t).forEach(x => m += x); return m; }
 function getCompletedTaskCount(dateStr) { const t = data.taskTime[dateStr] || {}; let c = 0; Object.values(t).forEach(m => { if (m >= COMPLETE_THRESHOLD) c++; }); return c; }
@@ -661,18 +688,21 @@ function openManualModal(task) {
 
 function saveManualTime() {
     const minutes = parseInt(document.getElementById('manualMinutes').value);
-    if (isNaN(minutes) || minutes < 0) { alert('请输入有效的分钟数'); return; }
+    if (isNaN(minutes) || minutes < 0) { 
+        closeModal('manualTimeModal');
+        return; 
+    }
     // 确保数据结构存在
     if (!data.taskTime) data.taskTime = {};
     if (!data.taskTime[currentDate]) data.taskTime[currentDate] = {};
     data.taskTime[currentDate][manualTaskName] = minutes;
     saveData();
+    closeModal('manualTimeModal');
     renderTaskList();
     updateStats();
     renderCalendar();
     renderReview();
     renderTrendChart();
-    closeModal('manualTimeModal');
     showTip('时长已更新 ✓');
 }
 
